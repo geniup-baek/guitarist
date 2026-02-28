@@ -2,15 +2,17 @@
 import { ref } from 'vue'
 import TunerDevice from './components/TunerDevice.vue'
 import MetronomeDevice from './components/MetronomeDevice.vue'
+import MusicBoxDevice from './components/MusicBoxDevice.vue'
 import { useTuner } from './composables/useTuner'
 import { useMetronome } from './composables/useMetronome'
+import { useMusicBox } from './composables/useMusicBox'
 
-const currentMode = ref<'tuner' | 'metronome'>('metronome') // Start with metronome based on recent request
+const currentMode = ref<'tuner' | 'metronome' | 'musicbox'>('metronome')
 
 // Tuner Logic
 const { 
   isListening: isTunerListening, 
-  currentNote, 
+  currentNote: tunerCurrentNote, 
   currentCents, 
   currentFrequency, 
   toggle: toggleTuner 
@@ -25,13 +27,37 @@ const {
   toggleMetronome
 } = useMetronome()
 
-const switchMode = (mode: 'tuner' | 'metronome') => {
+// MusicBox Logic
+const {
+  isPlaying: isMusicBoxPlaying,
+  bpm: musicBoxBpm,
+  selectedSong,
+  songOptions,
+  recommendedBpm,
+  isLoop,
+  currentStep,
+  totalSteps,
+  currentNote: musicBoxCurrentNote,
+  currentChord: musicBoxCurrentChord,
+  toggleMusicBox,
+  stopMusicBox,
+  setSong
+} = useMusicBox()
+
+const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox') => {
   // Turn off active audio contexts when switching to avoid weird overlaps
-  if (mode === 'metronome' && isTunerListening.value) {
+  if (mode !== 'tuner' && isTunerListening.value) {
     toggleTuner()
-  } else if (mode === 'tuner' && isMetronomePlaying.value) {
+  }
+
+  if (mode !== 'metronome' && isMetronomePlaying.value) {
     toggleMetronome()
   }
+
+  if (mode !== 'musicbox' && isMusicBoxPlaying.value) {
+    void stopMusicBox()
+  }
+
   currentMode.value = mode
 }
 
@@ -54,6 +80,13 @@ const switchMode = (mode: 'tuner' | 'metronome') => {
       >
         Metronome
       </button>
+      <button
+        class="nav-btn"
+        :class="{ active: currentMode === 'musicbox' }"
+        @click="switchMode('musicbox')"
+      >
+        Music Box
+      </button>
     </nav>
 
     <div class="device-container">
@@ -61,19 +94,35 @@ const switchMode = (mode: 'tuner' | 'metronome') => {
         <TunerDevice
           v-if="currentMode === 'tuner'"
           :isListening="isTunerListening"
-          :note="currentNote"
+          :note="tunerCurrentNote"
           :cents="currentCents"
           :frequency="currentFrequency"
           @toggle="toggleTuner"
         />
-        
+
         <MetronomeDevice
-          v-else
+          v-else-if="currentMode === 'metronome'"
           :isPlaying="isMetronomePlaying"
           v-model:bpm="bpm"
           v-model:beatsPerMeasure="beatsPerMeasure"
           :currentBeat="currentBeat"
           @toggle="toggleMetronome"
+        />
+
+        <MusicBoxDevice
+          v-else
+          :isPlaying="isMusicBoxPlaying"
+          v-model:bpm="musicBoxBpm"
+          :selectedSong="selectedSong"
+          :songs="songOptions"
+          :recommendedBpm="recommendedBpm"
+          v-model:isLoop="isLoop"
+          :currentStep="currentStep"
+          :totalSteps="totalSteps"
+          :currentNote="musicBoxCurrentNote"
+          :currentChord="musicBoxCurrentChord"
+          @update:selectedSong="setSong"
+          @toggle="toggleMusicBox"
         />
       </Transition>
     </div>

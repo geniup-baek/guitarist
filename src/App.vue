@@ -47,6 +47,7 @@ const {
   currentChord: musicBoxCurrentChord,
   applySongFormEdit,
   applyPresetFormEdit,
+  createNewSong,
   resetSongData,
   toggleMusicBox,
   stopMusicBox,
@@ -143,6 +144,9 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox' | 'musicbox-editor'
 
         <MusicBoxEditorDevice
           v-else
+          :isPlaying="isMusicBoxPlaying"
+          :currentStep="currentStep"
+          :totalSteps="totalSteps"
           :selectedSong="selectedSong"
           :songs="songOptions"
           :noteOptions="noteOptions"
@@ -153,7 +157,9 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox' | 'musicbox-editor'
           @update:selectedSong="setSong"
           @applySongForm="applySongFormEdit"
           @applyPresetForm="applyPresetFormEdit"
+          @createSong="(name) => createNewSong(name)"
           @resetSongData="resetSongData"
+          @togglePlay="toggleMusicBox"
         />
       </Transition>
     </div>

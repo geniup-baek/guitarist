@@ -22,6 +22,8 @@ const FALLBACK_SONG: Song = {
 export function useMusicBox() {
   const isPlaying = ref(false)
   const editableSongs = ref<Record<string, Song>>({})
+  const customSongOrder = ref<string[]>([])
+  const customSongBase = ref<Record<string, Song>>({})
   const editablePresetRaw = ref<Record<string, RawPreset>>({})
   const initialSong = SONGS[0] ?? FALLBACK_SONG
   const bpm = ref(initialSong.recommendedBpm)
@@ -34,6 +36,10 @@ export function useMusicBox() {
 
   let audioContext: AudioContext | null = null
   let timerId: number | null = null
+
+  const hasBuiltInSongKey = (songKey: string) => {
+    return SONGS.some((song) => song.key === songKey)
+  }
 
   const findBaseSong = (songKey: string) => {
     return SONGS.find((song) => song.key === songKey) ?? SONGS[0] ?? FALLBACK_SONG
@@ -53,12 +59,55 @@ export function useMusicBox() {
       name: editableSongs.value[key]?.name ?? name,
       group: 'Songs' as const
     })),
+    ...customSongOrder.value
+      .map((key) => editableSongs.value[key])
+      .filter((song): song is Song => !!song)
+      .map((song) => ({
+        key: song.key,
+        name: song.name,
+        group: 'Songs' as const
+      })),
     ...MUSIC_BOX_ARPEGGIO_PRESETS.map(({ key, name }) => ({
       key,
       name: editableSongs.value[key]?.name ?? name,
       group: 'Arpeggio' as const
     }))
   ])
+  const createNewSong = (name?: string) => {
+    let index = customSongOrder.value.length + 1
+    let key = `custom-song-${index}`
+
+    while (editableSongs.value[key] || hasBuiltInSongKey(key)) {
+      index += 1
+      key = `custom-song-${index}`
+    }
+
+    const defaultName = `New Song ${index}`
+    const songName = typeof name === 'string' && name.trim() ? name.trim() : defaultName
+
+    const newSong: Song = {
+      key,
+      name: songName,
+      recommendedBpm: 96,
+      notes: [{ note: 'C4', frequency: NOTE_FREQUENCIES.C4, beats: 1 }]
+    }
+
+    editableSongs.value[key] = newSong
+    customSongBase.value[key] = {
+      key,
+      name: newSong.name,
+      recommendedBpm: newSong.recommendedBpm,
+      notes: newSong.notes.map((step) => ({ ...step }))
+    }
+    customSongOrder.value.push(key)
+
+    selectedSong.value = key
+    bpm.value = newSong.recommendedBpm
+    currentStep.value = 0
+    currentChord.value = '--'
+    dataEditStatus.value = `새 곡 생성: ${newSong.name}`
+  }
+
 
   const activeSong = computed<Song>(() => {
     return getSongByKey(selectedSong.value)
@@ -77,8 +126,7 @@ export function useMusicBox() {
       recommendedBpm: song.recommendedBpm,
       notes: song.notes.map((step) => ({
         note: step.note,
-        beats: step.beats,
-        chord: step.chord ?? ''
+        beats: step.beats
       }))
     }
   })
@@ -103,7 +151,7 @@ export function useMusicBox() {
   const applySongFormEdit = (form: {
     name: string
     recommendedBpm: number
-    notes: Array<{ note: string; beats: number; chord?: string }>
+    notes: Array<{ note: string; beats: number }>
   }) => {
     if (typeof form.name !== 'string' || !form.name.trim()) {
       dataEditStatus.value = '적용 실패: 이름을 입력해 주세요.'
@@ -139,20 +187,19 @@ export function useMusicBox() {
       nextNotes.push({
         note: noteName,
         frequency,
-        beats: noteRow.beats,
-        chord: noteRow.chord?.trim() || undefined
+        beats: noteRow.beats
       })
     }
 
-    const baseSong = findBaseSong(selectedSong.value)
+    const songKey = selectedSong.value
     const nextSong: Song = {
-      key: baseSong.key,
+      key: songKey,
       name: form.name.trim(),
       recommendedBpm: Math.max(30, Math.min(300, form.recommendedBpm)),
       notes: nextNotes
     }
 
-    editableSongs.value[nextSong.key] = nextSong
+    editableSongs.value[songKey] = nextSong
     bpm.value = nextSong.recommendedBpm
     currentStep.value = 0
     currentChord.value = '--'
@@ -232,13 +279,23 @@ export function useMusicBox() {
   const resetSongData = () => {
     const key = selectedSong.value
     if (editableSongs.value[key]) {
-      delete editableSongs.value[key]
+      if (customSongBase.value[key]) {
+        const base = customSongBase.value[key]
+        editableSongs.value[key] = {
+          key: base.key,
+          name: base.name,
+          recommendedBpm: base.recommendedBpm,
+          notes: base.notes.map((step) => ({ ...step }))
+        }
+      } else {
+        delete editableSongs.value[key]
+      }
     }
     if (editablePresetRaw.value[key]) {
       delete editablePresetRaw.value[key]
     }
 
-    const baseSong = findBaseSong(key)
+    const baseSong = customSongBase.value[key] ?? findBaseSong(key)
     bpm.value = baseSong.recommendedBpm
     currentStep.value = 0
     currentChord.value = '--'
@@ -379,6 +436,7 @@ export function useMusicBox() {
     currentChord,
     applySongFormEdit,
     applyPresetFormEdit,
+    createNewSong,
     resetSongData,
     toggleMusicBox,
     stopMusicBox,

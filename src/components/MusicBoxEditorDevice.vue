@@ -2,13 +2,16 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const props = defineProps<{
+  isPlaying: boolean
+  currentStep: number
+  totalSteps: number
   selectedSong: string
   songs: Array<{ key: string; name: string; group: 'Songs' | 'Arpeggio' }>
   noteOptions: string[]
   songDataForm: {
     name: string
     recommendedBpm: number
-    notes: Array<{ note: string; beats: number; chord: string }>
+    notes: Array<{ note: string; beats: number }>
   }
   presetDataForm: {
     name: string
@@ -21,10 +24,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:selectedSong', value: string): void
+  (e: 'createSong', name?: string): void
+  (e: 'togglePlay'): void
   (e: 'applySongForm', payload: {
     name: string
     recommendedBpm: number
-    notes: Array<{ note: string; beats: number; chord: string }>
+    notes: Array<{ note: string; beats: number }>
   }): void
   (e: 'applyPresetForm', payload: {
     name: string
@@ -39,7 +44,9 @@ const presetItems = computed(() => props.songs.filter((item) => item.group === '
 
 const editorMode = ref<'song' | 'preset'>(props.isSelectedPreset ? 'preset' : 'song')
 const isPainting = ref(false)
-const paintNote = ref(props.noteOptions[0] ?? 'C4')
+const hasPendingSongDraft = ref(false)
+const isCreatingSong = ref(false)
+const newSongName = ref('')
 
 const editorForm = ref({
   name: props.songDataForm.name,
@@ -89,6 +96,8 @@ const reloadCurrentPreset = () => {
 
 const switchMode = (mode: 'song' | 'preset') => {
   editorMode.value = mode
+  isCreatingSong.value = false
+  newSongName.value = ''
   const targetList = mode === 'song' ? songItems.value : presetItems.value
   const firstTarget = targetList[0]
   if (firstTarget) {
@@ -96,45 +105,82 @@ const switchMode = (mode: 'song' | 'preset') => {
   }
 }
 
+const openCreateSongInput = () => {
+  isCreatingSong.value = true
+  newSongName.value = ''
+}
+
+const cancelCreateSong = () => {
+  isCreatingSong.value = false
+  newSongName.value = ''
+}
+
+const confirmCreateSong = () => {
+  emit('createSong', newSongName.value)
+  isCreatingSong.value = false
+  newSongName.value = ''
+}
+
 const stopPainting = () => {
   isPainting.value = false
+
+  if (hasPendingSongDraft.value && editorMode.value === 'song') {
+    emit('applySongForm', editorForm.value)
+    hasPendingSongDraft.value = false
+  }
 }
 
-const paintSlot = (index: number) => {
+const paintSlot = (index: number, note: string) => {
   const slot = editorForm.value.notes[index]
   if (!slot) return
-  slot.note = paintNote.value
+  if (slot.note === note) return
+  slot.note = note
+  hasPendingSongDraft.value = true
 }
 
-const startPainting = (index: number) => {
+const startPainting = (index: number, note: string) => {
   isPainting.value = true
-  paintSlot(index)
+  paintSlot(index, note)
 }
 
-const paintWhileDragging = (index: number) => {
+const paintWhileDragging = (index: number, note: string) => {
   if (!isPainting.value) return
-  paintSlot(index)
+  paintSlot(index, note)
+}
+
+const isActiveCell = (index: number, note: string) => {
+  return editorForm.value.notes[index]?.note === note
+}
+
+const playingRowIndex = computed(() => {
+  if (!props.isPlaying || props.totalSteps <= 0) return -1
+  return Math.max(0, Math.min(props.totalSteps - 1, props.currentStep - 1))
+})
+
+const isPlayingRow = (index: number) => {
+  return index === playingRowIndex.value
 }
 
 const addRow = () => {
   editorForm.value.notes.push({
     note: props.noteOptions[0] ?? 'C4',
-    beats: 1,
-    chord: ''
+    beats: 1
   })
+  emit('applySongForm', editorForm.value)
 }
 
 const insertRowAt = (index: number) => {
   editorForm.value.notes.splice(index, 0, {
     note: props.noteOptions[0] ?? 'C4',
-    beats: 1,
-    chord: ''
+    beats: 1
   })
+  emit('applySongForm', editorForm.value)
 }
 
 const removeRow = (index: number) => {
   if (editorForm.value.notes.length <= 1) return
   editorForm.value.notes.splice(index, 1)
+  emit('applySongForm', editorForm.value)
 }
 
 const addProgressionRow = () => {
@@ -152,6 +198,18 @@ const removeProgressionRow = (index: number) => {
   presetForm.value.progression.splice(index, 1)
 }
 
+const handleTogglePlay = () => {
+  if (!props.isPlaying) {
+    if (editorMode.value === 'song') {
+      emit('applySongForm', editorForm.value)
+    } else {
+      emit('applyPresetForm', presetForm.value)
+    }
+  }
+
+  emit('togglePlay')
+}
+
 onMounted(() => {
   window.addEventListener('pointerup', stopPainting)
 })
@@ -165,6 +223,9 @@ onUnmounted(() => {
   <div class="editor-container glass-panel">
     <header class="editor-header">
       <h1 class="text-gradient">Music Box Editor</h1>
+      <button class="play-btn" :class="{ active: isPlaying }" type="button" @click="handleTogglePlay">
+        {{ isPlaying ? 'Stop' : 'Play' }}
+      </button>
     </header>
 
     <main class="editor-main">
@@ -207,21 +268,26 @@ onUnmounted(() => {
 
       <template v-if="editorMode === 'song'">
         <div class="editor-actions">
+          <button v-if="!isCreatingSong" class="editor-btn" type="button" @click="openCreateSongInput">새 곡 추가</button>
           <button class="editor-btn" type="button" @click="reloadCurrentSong">현재 데이터 불러오기</button>
           <button class="editor-btn" type="button" @click="addRow">포지션 추가</button>
           <button class="editor-btn" type="button" @click="emit('applySongForm', editorForm)">적용</button>
           <button class="editor-btn" type="button" @click="emit('resetSongData')">초기화</button>
         </div>
 
-        <div class="paint-tools">
-          <label class="field compact">
-            <span>드래그 입력 노트</span>
-            <select v-model="paintNote" class="row-input">
-              <option v-for="note in noteOptions" :key="note" :value="note">{{ note }}</option>
-            </select>
-          </label>
-          <span class="paint-help">슬롯 상단 버튼을 클릭 후 드래그하면 연속 입력됩니다.</span>
+        <div v-if="isCreatingSong" class="create-song-inline">
+          <input
+            v-model="newSongName"
+            class="field-input"
+            type="text"
+            placeholder="새 곡 이름 (비우면 자동 이름)"
+            @keydown.enter.prevent="confirmCreateSong"
+          />
+          <button class="editor-btn" type="button" @click="confirmCreateSong">생성</button>
+          <button class="editor-btn" type="button" @click="cancelCreateSong">취소</button>
         </div>
+
+        <p class="paint-help">모눈 셀을 클릭/드래그하면 해당 포지션에 음이 입력됩니다. 세로로 스크롤하며 연속 입력하세요.</p>
 
         <div class="form-grid">
           <label class="field">
@@ -234,24 +300,36 @@ onUnmounted(() => {
           </label>
         </div>
 
-        <div class="tape-wrap">
-          <div v-for="(row, index) in editorForm.notes" :key="index" class="tape-slot">
-            <button type="button" class="insert-btn" @click="insertRowAt(index)">앞에 +</button>
-            <div class="slot-index">{{ index + 1 }}</div>
-            <button
-              type="button"
-              class="tape-hole"
-              :class="{ painting: isPainting }"
-              @pointerdown.prevent="startPainting(index)"
-              @pointerenter="paintWhileDragging(index)"
-            >
-              {{ row.note }}
-            </button>
-            <select v-model="row.note" class="row-input">
-              <option v-for="note in noteOptions" :key="note" :value="note">{{ note }}</option>
-            </select>
-            <input v-model.number="row.beats" class="row-input" type="number" min="0.25" step="0.25" />
-            <button class="row-remove" type="button" @click="removeRow(index)">삭제</button>
+        <div class="grid-paper-wrap">
+          <div class="grid-paper">
+            <div class="grid-head sticky-col">#</div>
+            <div class="grid-head sticky-meta">Beats</div>
+            <div class="grid-head sticky-action"></div>
+            <div v-for="note in noteOptions" :key="`head-${note}`" class="grid-head note-head">{{ note }}</div>
+
+            <template v-for="(row, index) in editorForm.notes" :key="index">
+              <div class="grid-cell sticky-col row-index" :class="{ 'playing-row': isPlayingRow(index) }">
+                <button class="insert-btn" type="button" :title="`${index + 1}번 앞에 삽입`" @click="insertRowAt(index)">+</button>
+              </div>
+              <div class="grid-cell sticky-meta" :class="{ 'playing-row': isPlayingRow(index) }">
+                <input v-model.number="row.beats" class="row-input" type="number" min="0.25" step="0.25" />
+              </div>
+              <div class="grid-cell sticky-action" :class="{ 'playing-row': isPlayingRow(index) }">
+                <button class="row-remove" type="button" @click="removeRow(index)">X</button>
+              </div>
+
+              <button
+                v-for="note in noteOptions"
+                :key="`${index}-${note}`"
+                type="button"
+                class="grid-cell note-cell"
+                :class="{ active: isActiveCell(index, note), painting: isPainting, 'playing-row': isPlayingRow(index) }"
+                @pointerdown.prevent="startPainting(index, note)"
+                @pointerenter="paintWhileDragging(index, note)"
+              >
+                <span v-if="isActiveCell(index, note)">●</span>
+              </button>
+            </template>
           </div>
         </div>
       </template>
@@ -295,7 +373,7 @@ onUnmounted(() => {
             <select v-model="row.fifth" class="row-input">
               <option v-for="note in noteOptions" :key="note" :value="note">{{ note }}</option>
             </select>
-            <button class="row-remove" type="button" @click="removeProgressionRow(index)">삭제</button>
+            <button class="row-remove" type="button" @click="removeProgressionRow(index)">X</button>
           </div>
         </div>
       </template>
@@ -318,6 +396,28 @@ onUnmounted(() => {
 .editor-header h1 {
   font-size: 1.35rem;
   margin: 0;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.play-btn {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.45rem 0.9rem;
+}
+
+.play-btn.active {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.5);
+  background: rgba(16, 185, 129, 0.18);
 }
 
 .editor-main {
@@ -374,6 +474,16 @@ label {
   gap: 0.45rem;
 }
 
+.create-song-inline {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.create-song-inline .field-input {
+  min-width: 260px;
+}
+
 .paint-tools {
   display: flex;
   align-items: flex-end;
@@ -427,47 +537,99 @@ label {
   gap: 0.45rem;
 }
 
-.tape-wrap {
-  display: flex;
-  gap: 0.5rem;
-  overflow-x: auto;
-  padding: 0.3rem 0;
-}
-
-.tape-slot {
-  min-width: 130px;
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 10px;
-  padding: 0.45rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  background: rgba(0, 0, 0, 0.18);
-}
-
 .insert-btn {
+  width: 100%;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-main);
   font-size: 0.72rem;
-  padding: 0.25rem 0.4rem;
+  padding: 0.2rem 0;
 }
 
-.tape-hole {
-  border-radius: 8px;
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  background: rgba(56, 189, 248, 0.12);
-  color: #7dd3fc;
-  font-weight: 700;
-  font-size: 0.78rem;
-  padding: 0.35rem 0.45rem;
+.grid-paper-wrap {
+  overflow: auto;
+  max-height: 460px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
 }
 
-.tape-hole.painting {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #6ee7b7;
+.grid-paper {
+  display: grid;
+  grid-template-columns: 52px 74px 44px repeat(25, 40px);
+  min-width: max-content;
+}
+
+.grid-head,
+.grid-cell {
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.grid-head {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: rgba(20, 28, 44, 0.98);
+}
+
+.note-head {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  padding: 4px 0;
+}
+
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: rgba(20, 28, 44, 0.98);
+}
+
+.sticky-meta {
+  position: sticky;
+  left: 52px;
+  z-index: 5;
+  background: rgba(20, 28, 44, 0.98);
+}
+
+.sticky-action {
+  position: sticky;
+  left: 126px;
+  z-index: 5;
+  background: rgba(20, 28, 44, 0.98);
+}
+
+.row-index {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.note-cell {
+  cursor: pointer;
+  color: rgba(125, 211, 252, 0.95);
+  font-size: 0.8rem;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.note-cell.active {
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.note-cell.painting:hover {
+  background: rgba(16, 185, 129, 0.24);
+}
+
+.grid-cell.playing-row {
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.55);
+  background: rgba(56, 189, 248, 0.1);
 }
 
 .slot-index {
@@ -494,6 +656,8 @@ label {
 }
 
 .row-input {
+  width: 100%;
+  box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(0, 0, 0, 0.28);
@@ -502,11 +666,12 @@ label {
 }
 
 .row-remove {
+  width: 100%;
   border-radius: 8px;
   border: 1px solid rgba(239, 68, 68, 0.5);
   background: rgba(239, 68, 68, 0.12);
   color: #fca5a5;
-  padding: 0.35rem 0.55rem;
+  padding: 0.3rem 0;
   font-size: 0.75rem;
 }
 

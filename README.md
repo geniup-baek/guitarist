@@ -1,5 +1,54 @@
-# Vue 3 + TypeScript + Vite
+# Guitarist (Vue + Vite + PWA)
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+이 프로젝트는 `vite-plugin-pwa` 기반으로 동작하며, `GitHub Pages`에 배포 후 안드로이드에서 설치해 오프라인으로 사용할 수 있습니다.
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+## 1) 로컬 실행
+
+```bash
+npm install
+npm run dev
+```
+
+## 2) GitHub Pages 배포 (자동)
+
+프로젝트에는 이미 `.github/workflows/deploy.yml`이 포함되어 있습니다.
+
+1. GitHub에 저장소를 생성하고 현재 코드를 push 합니다.
+2. 기본 브랜치를 `main`으로 맞춥니다.
+3. GitHub 저장소에서 `Settings > Pages`로 이동합니다.
+4. `Source`를 **GitHub Actions**로 선택합니다.
+5. `main` 브랜치에 push 하면 자동으로 빌드/배포됩니다.
+
+배포 URL 예시:
+
+```text
+https://<github-id>.github.io/<repo-name>/
+```
+
+## 3) 안드로이드에서 설치(PWA)
+
+1. 크롬에서 배포 URL 접속
+2. 첫 로딩이 끝날 때까지 온라인 상태 유지 (캐시 생성)
+3. 브라우저 메뉴에서 **홈 화면에 추가** 또는 **앱 설치** 선택
+4. 설치된 앱 실행 후, 비행기 모드(오프라인)에서 재실행
+
+오프라인으로 동작하려면 **최소 1회 이상 온라인 접속 후** 캐시가 만들어져야 합니다.
+
+## 4) 오프라인 동작 확인 체크리스트
+
+- 앱을 설치한 뒤 온라인에서 한 번 실행했는지
+- 앱 아이콘으로 실행했는지(브라우저 탭 말고)
+- 최신 코드 배포 후 앱을 완전히 종료하고 재실행했는지
+
+## 5) 마이크 권한(튜너 기능) 주의사항
+
+- GitHub Pages는 HTTPS라서 마이크 권한 요청이 가능합니다.
+- 안드로이드에서 권한 팝업이 뜨면 허용해야 튜너가 동작합니다.
+- 기기/브라우저 정책에 따라 오프라인 상태에서 권한 재요청이 제한될 수 있으니, 설치 직후 온라인 상태에서 권한 허용을 먼저 완료하는 것을 권장합니다.
+
+## 6) 수동 빌드
+
+```bash
+npm run build
+npm run preview
+```

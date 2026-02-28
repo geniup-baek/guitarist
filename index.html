@@ -4,10 +4,18 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>guitar</title>
+    <meta name="theme-color" content="#1a1a1a" />
+    <title>Guitarist</title>
   </head>
   <body>
     <div id="app"></div>
+    <script>
+      const redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect !== location.pathname + location.search + location.hash) {
+        history.replaceState(null, '', redirect);
+      }
+    </script>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

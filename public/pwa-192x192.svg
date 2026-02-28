@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-label="Guitarist Tuner icon">
+  <rect width="192" height="192" rx="42" fill="#1a1a1a"/>
+  <circle cx="96" cy="96" r="58" fill="#ffffff" opacity="0.12"/>
+  <path d="M56 132c16-18 64-18 80 0" stroke="#f8f8f8" stroke-width="10" stroke-linecap="round" fill="none"/>
+  <circle cx="72" cy="86" r="10" fill="#f8f8f8"/>
+  <circle cx="96" cy="74" r="10" fill="#f8f8f8"/>
+  <circle cx="120" cy="86" r="10" fill="#f8f8f8"/>
+</svg>

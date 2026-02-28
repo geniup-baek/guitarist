@@ -1,0 +1,15 @@
+{
+  "key": "canon",
+  "name": "Canon Loop",
+  "recommendedBpm": 76,
+  "notes": [
+    { "note": "D4", "beats": 1 },
+    { "note": "A3", "beats": 1 },
+    { "note": "B3", "beats": 1 },
+    { "note": "F#3", "beats": 1 },
+    { "note": "G3", "beats": 1 },
+    { "note": "D3", "beats": 1 },
+    { "note": "G3", "beats": 1 },
+    { "note": "A3", "beats": 1 }
+  ]
+}

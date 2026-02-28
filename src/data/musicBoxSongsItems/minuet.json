@@ -1,0 +1,16 @@
+{
+  "key": "minuet",
+  "name": "Minuet Theme",
+  "recommendedBpm": 88,
+  "notes": [
+    { "note": "G4", "beats": 1 },
+    { "note": "A4", "beats": 1 },
+    { "note": "B4", "beats": 1 },
+    { "note": "C5", "beats": 1 },
+    { "note": "D5", "beats": 1 },
+    { "note": "B4", "beats": 1 },
+    { "note": "C5", "beats": 1 },
+    { "note": "A4", "beats": 1 },
+    { "note": "G4", "beats": 2 }
+  ]
+}

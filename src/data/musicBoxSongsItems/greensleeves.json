@@ -1,0 +1,17 @@
+{
+  "key": "greensleeves",
+  "name": "Greensleeves",
+  "recommendedBpm": 78,
+  "notes": [
+    { "note": "A4", "beats": 1 },
+    { "note": "C5", "beats": 1 },
+    { "note": "D5", "beats": 1 },
+    { "note": "E5", "beats": 1 },
+    { "note": "F5", "beats": 1 },
+    { "note": "E5", "beats": 1 },
+    { "note": "D5", "beats": 1 },
+    { "note": "C5", "beats": 1 },
+    { "note": "B4", "beats": 1 },
+    { "note": "A4", "beats": 2 }
+  ]
+}

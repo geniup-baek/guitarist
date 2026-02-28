@@ -1,0 +1,11 @@
+{
+  "key": "arp-andalusian-amgfe",
+  "name": "Arp • Am-G-F-E",
+  "recommendedBpm": 98,
+  "progression": [
+    { "name": "Am", "root": "A2", "third": "C3", "fifth": "E3" },
+    { "name": "G", "root": "G2", "third": "B2", "fifth": "D3" },
+    { "name": "F", "root": "F2", "third": "A2", "fifth": "C3" },
+    { "name": "E", "root": "E2", "third": "G#2", "fifth": "B2" }
+  ]
+}

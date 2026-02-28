@@ -1,0 +1,11 @@
+{
+  "key": "arp-jazz-251-c",
+  "name": "Arp • Dm7-G7-Cmaj7",
+  "recommendedBpm": 110,
+  "progression": [
+    { "name": "Dm", "root": "D3", "third": "F3", "fifth": "A3" },
+    { "name": "G", "root": "G2", "third": "B2", "fifth": "D3" },
+    { "name": "C", "root": "C3", "third": "E3", "fifth": "G3" },
+    { "name": "C", "root": "C3", "third": "E3", "fifth": "G3" }
+  ]
+}

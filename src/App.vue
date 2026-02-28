@@ -3,11 +3,12 @@ import { ref } from 'vue'
 import TunerDevice from './components/TunerDevice.vue'
 import MetronomeDevice from './components/MetronomeDevice.vue'
 import MusicBoxDevice from './components/MusicBoxDevice.vue'
+import MusicBoxEditorDevice from './components/MusicBoxEditorDevice.vue'
 import { useTuner } from './composables/useTuner'
 import { useMetronome } from './composables/useMetronome'
 import { useMusicBox } from './composables/useMusicBox'
 
-const currentMode = ref<'tuner' | 'metronome' | 'musicbox'>('metronome')
+const currentMode = ref<'tuner' | 'metronome' | 'musicbox' | 'musicbox-editor'>('metronome')
 
 // Tuner Logic
 const { 
@@ -33,18 +34,23 @@ const {
   bpm: musicBoxBpm,
   selectedSong,
   songOptions,
+  noteOptions,
   recommendedBpm,
+  activeSongEditorForm,
+  dataEditStatus,
   isLoop,
   currentStep,
   totalSteps,
   currentNote: musicBoxCurrentNote,
   currentChord: musicBoxCurrentChord,
+  applySongFormEdit,
+  resetSongData,
   toggleMusicBox,
   stopMusicBox,
   setSong
 } = useMusicBox()
 
-const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox') => {
+const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox' | 'musicbox-editor') => {
   // Turn off active audio contexts when switching to avoid weird overlaps
   if (mode !== 'tuner' && isTunerListening.value) {
     toggleTuner()
@@ -87,6 +93,13 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox') => {
       >
         Music Box
       </button>
+      <button
+        class="nav-btn"
+        :class="{ active: currentMode === 'musicbox-editor' }"
+        @click="switchMode('musicbox-editor')"
+      >
+        Editor
+      </button>
     </nav>
 
     <div class="device-container">
@@ -110,7 +123,7 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox') => {
         />
 
         <MusicBoxDevice
-          v-else
+          v-else-if="currentMode === 'musicbox'"
           :isPlaying="isMusicBoxPlaying"
           v-model:bpm="musicBoxBpm"
           :selectedSong="selectedSong"
@@ -123,6 +136,18 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox') => {
           :currentChord="musicBoxCurrentChord"
           @update:selectedSong="setSong"
           @toggle="toggleMusicBox"
+        />
+
+        <MusicBoxEditorDevice
+          v-else
+          :selectedSong="selectedSong"
+          :songs="songOptions"
+          :noteOptions="noteOptions"
+          :songDataForm="activeSongEditorForm"
+          :dataEditStatus="dataEditStatus"
+          @update:selectedSong="setSong"
+          @applySongForm="applySongFormEdit"
+          @resetSongData="resetSongData"
         />
       </Transition>
     </div>

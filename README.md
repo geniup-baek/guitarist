@@ -7,7 +7,8 @@
 - Tuner: 마이크 기반 기타 음정 튜너
 - Metronome: BPM/박자 조절 메트로놈
 - Music Box: 곡 선택 + BPM 조절 + 루프 재생 + 기타 코드 진행(아르페지오) 프리셋
-- Music Box 데이터 분리: `src/data/musicBoxSongs.ts`(곡), `src/data/musicBoxArpeggioPresets.ts`(코드 진행 프리셋)
+- Music Box 데이터 소스: `src/data/musicBoxSongsItems/*.json`, `src/data/musicBoxPresetItems/*.json`
+- Music Box 데이터 편집: 별도 Editor 화면에서 노트 행 단위 폼 편집(노트/박자/코드)
 
 ## 1) 로컬 실행
 

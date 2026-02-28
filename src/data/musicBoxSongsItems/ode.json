@@ -1,0 +1,22 @@
+{
+  "key": "ode",
+  "name": "Ode to Joy",
+  "recommendedBpm": 96,
+  "notes": [
+    { "note": "E4", "beats": 1 },
+    { "note": "E4", "beats": 1 },
+    { "note": "F4", "beats": 1 },
+    { "note": "G4", "beats": 1 },
+    { "note": "G4", "beats": 1 },
+    { "note": "F4", "beats": 1 },
+    { "note": "E4", "beats": 1 },
+    { "note": "D4", "beats": 1 },
+    { "note": "C4", "beats": 1 },
+    { "note": "C4", "beats": 1 },
+    { "note": "D4", "beats": 1 },
+    { "note": "E4", "beats": 1 },
+    { "note": "E4", "beats": 1.5 },
+    { "note": "D4", "beats": 0.5 },
+    { "note": "D4", "beats": 2 }
+  ]
+}

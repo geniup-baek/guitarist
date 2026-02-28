@@ -1,16 +1,18 @@
 import { NOTE_FREQUENCIES, type NoteName } from './musicBoxNotes'
 import type { Song } from './musicBoxTypes'
 
-type RawPreset = {
+export type RawPresetProgressionRow = {
+  name: string
+  root: string
+  third: string
+  fifth: string
+}
+
+export type RawPreset = {
   key: string
   name: string
   recommendedBpm: number
-  progression: Array<{
-    name: string
-    root: string
-    third: string
-    fifth: string
-  }>
+  progression: RawPresetProgressionRow[]
 }
 
 type RawPresetModule = {
@@ -19,7 +21,7 @@ type RawPresetModule = {
 
 const modules = import.meta.glob<RawPresetModule>('./musicBoxPresetItems/*.json', { eager: true })
 
-const toPresetSong = (raw: RawPreset): Song | null => {
+export const progressionToPresetSong = (raw: RawPreset): Song | null => {
   if (!raw?.key || !raw?.name || !Array.isArray(raw.progression) || raw.progression.length === 0) return null
 
   const notes: Song['notes'] = []
@@ -51,5 +53,15 @@ const toPresetSong = (raw: RawPreset): Song | null => {
 
 export const MUSIC_BOX_ARPEGGIO_PRESETS: Song[] = Object.entries(modules)
   .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
-  .map(([, module]) => toPresetSong(module.default))
+  .map(([, module]) => progressionToPresetSong(module.default))
   .filter((song): song is Song => song !== null)
+
+export const MUSIC_BOX_ARPEGGIO_PRESET_RAW_BY_KEY: Record<string, RawPreset> = Object.entries(modules)
+  .sort(([pathA], [pathB]) => pathA.localeCompare(pathB))
+  .reduce((acc, [, module]) => {
+    const preset = module.default
+    if (preset?.key) {
+      acc[preset.key] = preset
+    }
+    return acc
+  }, {} as Record<string, RawPreset>)

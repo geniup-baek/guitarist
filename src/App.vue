@@ -35,8 +35,10 @@ const {
   selectedSong,
   songOptions,
   noteOptions,
+  isSelectedPreset,
   recommendedBpm,
   activeSongEditorForm,
+  activePresetEditorForm,
   dataEditStatus,
   isLoop,
   currentStep,
@@ -44,6 +46,7 @@ const {
   currentNote: musicBoxCurrentNote,
   currentChord: musicBoxCurrentChord,
   applySongFormEdit,
+  applyPresetFormEdit,
   resetSongData,
   toggleMusicBox,
   stopMusicBox,
@@ -144,9 +147,12 @@ const switchMode = (mode: 'tuner' | 'metronome' | 'musicbox' | 'musicbox-editor'
           :songs="songOptions"
           :noteOptions="noteOptions"
           :songDataForm="activeSongEditorForm"
+          :presetDataForm="activePresetEditorForm"
+          :isSelectedPreset="isSelectedPreset"
           :dataEditStatus="dataEditStatus"
           @update:selectedSong="setSong"
           @applySongForm="applySongFormEdit"
+          @applyPresetForm="applyPresetFormEdit"
           @resetSongData="resetSongData"
         />
       </Transition>

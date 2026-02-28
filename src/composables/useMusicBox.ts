@@ -1,5 +1,11 @@
 import { computed, onUnmounted, ref } from 'vue'
-import { MUSIC_BOX_ARPEGGIO_PRESETS } from '../data/musicBoxArpeggioPresets'
+import {
+  MUSIC_BOX_ARPEGGIO_PRESETS,
+  MUSIC_BOX_ARPEGGIO_PRESET_RAW_BY_KEY,
+  progressionToPresetSong,
+  type RawPreset,
+  type RawPresetProgressionRow
+} from '../data/musicBoxArpeggioPresets'
 import { NOTE_FREQUENCIES, type NoteName } from '../data/musicBoxNotes'
 import { MUSIC_BOX_SONGS } from '../data/musicBoxSongs'
 import type { NoteStep, Song } from '../data/musicBoxTypes'
@@ -16,6 +22,7 @@ const FALLBACK_SONG: Song = {
 export function useMusicBox() {
   const isPlaying = ref(false)
   const editableSongs = ref<Record<string, Song>>({})
+  const editablePresetRaw = ref<Record<string, RawPreset>>({})
   const initialSong = SONGS[0] ?? FALLBACK_SONG
   const bpm = ref(initialSong.recommendedBpm)
   const selectedSong = ref(initialSong.key)
@@ -36,6 +43,10 @@ export function useMusicBox() {
     return editableSongs.value[songKey] ?? findBaseSong(songKey)
   }
 
+  const getRawPresetByKey = (songKey: string) => {
+    return editablePresetRaw.value[songKey] ?? MUSIC_BOX_ARPEGGIO_PRESET_RAW_BY_KEY[songKey]
+  }
+
   const songOptions = computed(() => [
     ...MUSIC_BOX_SONGS.map(({ key, name }) => ({
       key,
@@ -53,6 +64,10 @@ export function useMusicBox() {
     return getSongByKey(selectedSong.value)
   })
 
+  const isSelectedPreset = computed(() => {
+    return !!MUSIC_BOX_ARPEGGIO_PRESET_RAW_BY_KEY[selectedSong.value]
+  })
+
   const noteOptions = Object.keys(NOTE_FREQUENCIES) as NoteName[]
 
   const activeSongEditorForm = computed(() => {
@@ -65,6 +80,23 @@ export function useMusicBox() {
         beats: step.beats,
         chord: step.chord ?? ''
       }))
+    }
+  })
+
+  const activePresetEditorForm = computed(() => {
+    const rawPreset = getRawPresetByKey(selectedSong.value)
+    if (!rawPreset) {
+      return {
+        name: activeSong.value.name,
+        recommendedBpm: activeSong.value.recommendedBpm,
+        progression: [] as RawPresetProgressionRow[]
+      }
+    }
+
+    return {
+      name: rawPreset.name,
+      recommendedBpm: rawPreset.recommendedBpm,
+      progression: rawPreset.progression.map((row) => ({ ...row }))
     }
   })
 
@@ -127,10 +159,83 @@ export function useMusicBox() {
     dataEditStatus.value = `적용 완료: ${nextSong.name}`
   }
 
+  const applyPresetFormEdit = (form: {
+    name: string
+    recommendedBpm: number
+    progression: Array<{ name: string; root: string; third: string; fifth: string }>
+  }) => {
+    if (!isSelectedPreset.value) {
+      dataEditStatus.value = '적용 실패: 프리셋 항목에서만 가능합니다.'
+      return
+    }
+
+    if (typeof form.name !== 'string' || !form.name.trim()) {
+      dataEditStatus.value = '적용 실패: 프리셋 이름을 입력해 주세요.'
+      return
+    }
+
+    if (typeof form.recommendedBpm !== 'number' || !Number.isFinite(form.recommendedBpm)) {
+      dataEditStatus.value = '적용 실패: 추천 BPM은 숫자여야 합니다.'
+      return
+    }
+
+    if (!Array.isArray(form.progression) || form.progression.length === 0) {
+      dataEditStatus.value = '적용 실패: 코드 진행은 최소 1개 이상이어야 합니다.'
+      return
+    }
+
+    const progression: RawPresetProgressionRow[] = []
+    for (const row of form.progression) {
+      if (!row.name?.trim()) {
+        dataEditStatus.value = '적용 실패: 코드 이름을 입력해 주세요.'
+        return
+      }
+
+      const root = row.root as NoteName
+      const third = row.third as NoteName
+      const fifth = row.fifth as NoteName
+      if (!NOTE_FREQUENCIES[root] || !NOTE_FREQUENCIES[third] || !NOTE_FREQUENCIES[fifth]) {
+        dataEditStatus.value = '적용 실패: 코드톤에 유효한 노트를 선택해 주세요.'
+        return
+      }
+
+      progression.push({
+        name: row.name.trim(),
+        root,
+        third,
+        fifth
+      })
+    }
+
+    const key = selectedSong.value
+    const nextRawPreset: RawPreset = {
+      key,
+      name: form.name.trim(),
+      recommendedBpm: Math.max(30, Math.min(300, form.recommendedBpm)),
+      progression
+    }
+
+    const nextSong = progressionToPresetSong(nextRawPreset)
+    if (!nextSong) {
+      dataEditStatus.value = '적용 실패: 프리셋 변환에 실패했습니다.'
+      return
+    }
+
+    editablePresetRaw.value[key] = nextRawPreset
+    editableSongs.value[key] = nextSong
+    bpm.value = nextSong.recommendedBpm
+    currentStep.value = 0
+    currentChord.value = '--'
+    dataEditStatus.value = `적용 완료: ${nextSong.name}`
+  }
+
   const resetSongData = () => {
     const key = selectedSong.value
     if (editableSongs.value[key]) {
       delete editableSongs.value[key]
+    }
+    if (editablePresetRaw.value[key]) {
+      delete editablePresetRaw.value[key]
     }
 
     const baseSong = findBaseSong(key)
@@ -262,8 +367,10 @@ export function useMusicBox() {
     selectedSong,
     songOptions,
     noteOptions,
+    isSelectedPreset,
     recommendedBpm: computed(() => activeSong.value.recommendedBpm),
     activeSongEditorForm,
+    activePresetEditorForm,
     dataEditStatus,
     isLoop,
     currentStep,
@@ -271,6 +378,7 @@ export function useMusicBox() {
     currentNote,
     currentChord,
     applySongFormEdit,
+    applyPresetFormEdit,
     resetSongData,
     toggleMusicBox,
     stopMusicBox,
